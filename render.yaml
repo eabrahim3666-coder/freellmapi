@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: freellmapi
+    runtime: image
+    plan: free
+    region: singapore
+    healthCheckPath: /
+    image:
+      url: ghcr.io/tashfeenahmed/freellmapi:latest
+    envVars:
+      - key: ENCRYPTION_KEY
+        generateValue: true
