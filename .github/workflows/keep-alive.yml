@@ -17,14 +17,12 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 https://freellmapi-pkwf.onrender.com/)
           echo "HTTP $code at $(date -u +%H:%M:%S) UTC"
 
-      - name: Self-heal: never let GitHub's 60-day inactivity rule disable this workflow
+      - name: "Self-heal - auto commit before the GitHub 60-day inactivity disable"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          last=$(curl -sf -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits?per_page=1" \
-            | grep -m1 '"date"' | cut -d'"' -f4)
+          last=$(curl -sf -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/commits?per_page=1" | grep -m1 '"date"' | cut -d'"' -f4)
           if [ -z "$last" ]; then echo "could not read last commit date; skipping"; exit 0; fi
           days=$(( ($(date -u +%s) - $(date -u -d "$last" +%s)) / 86400 ))
           echo "Last commit was $days day(s) ago"
