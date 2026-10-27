@@ -7,6 +7,5 @@ services:
     healthCheckPath: /
     image:
       url: ghcr.io/tashfeenahmed/freellmapi:latest
-    envVars:
-      - key: ENCRYPTION_KEY
-        generateValue: true
+    # ENCRYPTION_KEY is set once in the Render dashboard (Environment), not here:
+    # Render's generateValue produces a non-hex string this app rejects.
