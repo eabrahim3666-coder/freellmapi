@@ -5,11 +5,34 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping FreeLLMAPI
+      - name: Ping FreeLLMAPI (prevents Render free sleep)
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 https://freellmapi-pkwf.onrender.com/)
           echo "HTTP $code at $(date -u +%H:%M:%S) UTC"
+
+      - name: Self-heal: never let GitHub's 60-day inactivity rule disable this workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          last=$(curl -sf -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits?per_page=1" \
+            | grep -m1 '"date"' | cut -d'"' -f4)
+          if [ -z "$last" ]; then echo "could not read last commit date; skipping"; exit 0; fi
+          days=$(( ($(date -u +%s) - $(date -u -d "$last" +%s)) / 86400 ))
+          echo "Last commit was $days day(s) ago"
+          if [ "$days" -lt 50 ]; then exit 0; fi
+          git config --global user.name "keepalive-bot"
+          git config --global user.email "actions@users.noreply.github.com"
+          git clone -q --depth 1 "https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git" repo
+          cd repo
+          git commit --allow-empty -m "chore: keepalive (auto, $(date -u +%F))"
+          git push -q origin HEAD
+          echo "keepalive commit pushed - inactivity clock reset"
